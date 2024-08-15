@@ -1,139 +1,171 @@
+# README: Análise e Previsão de Aderência de Investimentos
 
+## Descrição do Projeto
 
-# Classificação de Marketing em Investimentos
+Este projeto visa analisar dados de uma campanha de marketing para prever se clientes de um banco irão investir seu dinheiro. Usando técnicas de machine learning, o objetivo é construir um modelo de classificação que possa prever a aderência dos clientes aos investimentos com base em suas características.
 
-## Visão Geral
+## Conteúdo
 
-Este projeto tem como objetivo prever se os clientes de um banco aplicarão seu dinheiro em investimentos com base em uma campanha de marketing. Utilizamos técnicas de machine learning para construir e avaliar modelos de classificação. O projeto abrange desde a leitura e análise dos dados até o ajuste, avaliação e comparação dos modelos.
+1. **Introdução**
+2. **Leitura dos Dados**
+3. **Exploração dos Dados**
+4. **Transformação dos Dados**
+5. **Ajuste de Modelos**
+6. **Comparação de Modelos**
+7. **Salvamento do Melhor Modelo**
+8. **Uso do Modelo**
 
-## Estrutura do Projeto
+## 1. Introdução
 
-1. **Leitura dos Dados**
-   - Os dados são carregados a partir de um arquivo CSV utilizando a biblioteca `pandas`.
-   - O dataset é composto por 1268 registros e 9 colunas.
+O projeto utiliza dados de uma campanha de marketing para prever se clientes irão investir ou não. Utilizamos técnicas de machine learning para construir e avaliar modelos de classificação.
 
-2. **Análise Exploratória**
-   - Exploramos as variáveis categóricas e numéricas usando a biblioteca `plotly` para identificar padrões e inconsistências nos dados.
+## 2. Leitura dos Dados
 
-3. **Transformação dos Dados**
-   - **Variáveis Explicativas**: Transformamos variáveis categóricas em um formato numérico usando `OneHotEncoder` e mantemos as variáveis numéricas como estão.
-   - **Variável Alvo**: Transformamos a variável alvo em valores numéricos binários com `LabelEncoder`.
-
-4. **Divisão dos Dados**
-   - Os dados são divididos em conjuntos de treinamento e teste com `train_test_split`.
-
-5. **Ajuste e Avaliação dos Modelos**
-   - **Modelo Base**: Utilizamos `DummyClassifier` para estabelecer uma linha de base.
-   - **Árvore de Decisão**: Implementamos um modelo de árvore de decisão (`DecisionTreeClassifier`) e avaliamos seu desempenho.
-   - **KNN**: Ajustamos um modelo de K-Nearest Neighbors (`KNeighborsClassifier`) e normalizamos os dados com `MinMaxScaler`.
-
-6. **Escolha e Salvamento do Melhor Modelo**
-   - Comparamos o desempenho dos modelos e escolhemos o melhor.
-   - O modelo com melhor desempenho é salvo em um arquivo usando `pickle` para uso futuro.
-
-## Passos para Executar o Projeto
-
-1. **Instalação de Dependências**
-   Instale as bibliotecas necessárias usando o comando:
-   ```bash
-   pip install pandas plotly scikit-learn matplotlib
-   ```
-
-2. **Carregar e Explorar os Dados**
-   - O arquivo CSV é carregado e analisado para verificar a integridade dos dados e explorar variáveis categóricas e numéricas.
-
-3. **Transformar os Dados**
-   - Realize a transformação das variáveis explicativas e da variável alvo para o formato numérico adequado.
-
-4. **Dividir os Dados e Ajustar Modelos**
-   - Divida os dados em conjuntos de treinamento e teste.
-   - Ajuste e avalie os modelos de classificação.
-
-5. **Comparar Modelos e Salvar o Melhor**
-   - Compare o desempenho dos modelos e salve o modelo com melhor desempenho.
-
-## Código
-
-Aqui está o código utilizado no projeto:
+Os dados são carregados a partir de um arquivo CSV usando a biblioteca pandas. Aqui está como fazemos isso:
 
 ```python
 import pandas as pd
-import plotly.express as px
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, MinMaxScaler
-from sklearn.model_selection import train_test_split
-from sklearn.dummy import DummyClassifier
-from sklearn.tree import DecisionTreeClassifier, plot_tree
-from sklearn.neighbors import KNeighborsClassifier
-import matplotlib.pyplot as plt
-import pickle
 
-# Carregar os dados
-url = "https://raw.githubusercontent.com/lorranmendes22/Market/main/marketing.csv"
+# Carregar o dataset
+url = "https://raw.githubusercontent.com/lorranmendes22/Investimento-Market/main/marketing_investimento.csv"
 dados = pd.read_csv(url)
+dados.head()
+```
 
-# Verificar dados nulos e tipos de dados
-dados.info()
+## 3. Exploração dos Dados
 
-# Explorando os dados
+A análise exploratória ajuda a entender a distribuição dos dados e identificar padrões e inconsistências. Utilizamos a biblioteca plotly para visualização:
+
+```python
+import plotly.express as px
+
+# Histogramas das variáveis categóricas
 px.histogram(dados, x='aderencia_investimento', text_auto=True)
 px.histogram(dados, x='estado_civil', text_auto=True, color='aderencia_investimento', barmode='group')
+
+# Boxplot das variáveis numéricas
 px.box(dados, x='idade', color='aderencia_investimento')
+```
 
-# Transformar variáveis explicativas e variável alvo
+## 4. Transformação dos Dados
+
+Para usar algoritmos de machine learning, os dados precisam estar no formato numérico. Transformamos as variáveis categóricas e a variável alvo da seguinte maneira:
+
+```python
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
+
+# Separação das variáveis explicativas e variável alvo
+x = dados.drop(['fez_emprestimo', 'inadimplencia', 'aderencia_investimento'], axis=1)
 y = dados['aderencia_investimento']
-x = dados.drop('aderencia_investimento', axis=1)
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('cat', OneHotEncoder(), ['estado_civil', 'escolaridade', 'inadimplencia', 'fez_emprestimo']),
-        ('num', 'passthrough', ['idade', 'saldo', 'tempo_ult_contato', 'numero_contatos'])
-    ]
+
+# Transformação das variáveis explicativas
+transformer = make_column_transformer(
+    (StandardScaler(), x.select_dtypes(include=['number']).columns),
+    (OneHotEncoder(), x.select_dtypes(include=['object']).columns)
 )
-x_transformed = preprocessor.fit_transform(x)
-label_encoder = LabelEncoder()
-y_transformed = label_encoder.fit_transform(y)
+x_transformed = transformer.fit_transform(x)
 
-# Dividir os dados entre treino e teste
-x_train, x_test, y_train, y_test = train_test_split(x_transformed, y_transformed, test_size=0.2, random_state=42)
+# Transformação da variável alvo
+le = LabelEncoder()
+y_transformed = le.fit_transform(y)
+```
 
-# Ajustar e avaliar modelos
-dummy = DummyClassifier(strategy='most_frequent')
-dummy.fit(x_train, y_train)
-print(f"Desempenho do modelo base: {dummy.score(x_test, y_test)}")
+## 5. Ajuste de Modelos
 
+Os dados são divididos em conjuntos de treino e teste. Modelos de machine learning são ajustados e avaliados para prever a aderência de investimentos:
+
+```python
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# Divisão dos dados
+X_train, X_test, y_train, y_test = train_test_split(x_transformed, y_transformed, test_size=0.2, random_state=42)
+
+# Treinamento do modelo
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Avaliação do modelo
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Acurácia do modelo:", accuracy)
+```
+
+## 6. Comparação de Modelos
+
+Comparação de diferentes modelos de classificação, incluindo Dummy Classifier, Árvore de Decisão e KNN:
+
+```python
+from sklearn.dummy import DummyClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+
+# Dummy Classifier
+dummy = DummyClassifier()
+dummy.fit(X_train, y_train)
+dummy_accuracy = dummy.score(X_test, y_test) * 100
+
+# Árvore de Decisão
 tree = DecisionTreeClassifier()
-tree.fit(x_train, y_train)
-print(f"Desempenho da Árvore de Decisão: {tree.score(x_test, y_test)}")
-plt.figure(figsize=(20,10))
-plot_tree(tree, filled=True, feature_names=preprocessor.get_feature_names_out())
-plt.show()
+tree.fit(X_train, y_train)
+tree_accuracy = tree.score(X_test, y_test) * 100
 
-scaler = MinMaxScaler()
-x_train_scaled = scaler.fit_transform(x_train)
-x_test_scaled = scaler.transform(x_test)
+# KNN
 knn = KNeighborsClassifier()
-knn.fit(x_train_scaled, y_train)
-print(f"Desempenho do KNN: {knn.score(x_test_scaled, y_test)}")
+knn.fit(X_train, y_train)
+knn_accuracy = knn.score(X_test, y_test) * 100
 
-# Escolher e salvar o melhor modelo
-model_scores = {
-    'Modelo Base': dummy.score(x_test, y_test),
-    'Árvore de Decisão': tree.score(x_test, y_test),
-    'KNN': knn.score(x_test_scaled, y_test)
+print(f"Acurácia do Dummy Classifier: {dummy_accuracy:.2f}%")
+print(f"Acurácia da Árvore de Decisão: {tree_accuracy:.2f}%")
+print(f"Acurácia do KNN: {knn_accuracy:.2f}%")
+```
+
+## 7. Salvamento do Melhor Modelo
+
+O melhor modelo é salvo usando pickle para uso futuro:
+
+```python
+import pickle
+
+# Salvamento do modelo KNN
+with open('modelo_knn.pkl', 'wb') as arquivo:
+    pickle.dump(knn, arquivo)
+
+# Salvamento do transformador
+with open('modelo_transformer.pkl', 'wb') as arquivo:
+    pickle.dump(transformer, arquivo)
+```
+
+## 8. Uso do Modelo
+
+Carregamento do modelo salvo e previsão para novos dados:
+
+```python
+# Carregar o modelo e transformador
+modelo_knn = pickle.load(open('modelo_knn.pkl', 'rb'))
+modelo_transformer = pickle.load(open('modelo_transformer.pkl', 'rb'))
+
+# Novo cliente
+novo_cliente = {
+    'idade': [40],
+    'estado_civil': ['solteiro (a)'],
+    'escolaridade': ['superior'],
+    'inadimplente': [0],
+    'saldo': [23400],
+    'fez_emprestimo': ['nao'],
+    'tempo_ult_contato': [10],
+    'numero_contatos': [2]
 }
-melhor_modelo_nome = max(model_scores, key=model_scores.get)
-melhor_modelo = {'Modelo Base': dummy, 'Árvore de Decisão': tree, 'KNN': knn}[melhor_modelo_nome]
-print(f"Melhor modelo: {melhor_modelo_nome} com precisão de {model_scores[melhor_modelo_nome]}")
-with open('melhor_modelo.pkl', 'wb') as f:
-    pickle.dump(melhor_modelo, f)
+novo_cliente_df = pd.DataFrame(novo_cliente)
+novo_cliente_transformado = modelo_transformer.transform(novo_cliente_df)
 
-# Carregar o modelo salvo
-with open('melhor_modelo.pkl', 'rb') as f:
-    modelo_carregado = pickle.load(f)
-print("Modelo carregado com sucesso!")
+# Previsão
+previsao = modelo_knn.predict(novo_cliente_transformado)
+print("Previsão para o novo cliente:", le.inverse_transform(previsao))
 ```
 
 ## Conclusão
 
-Este projeto forneceu uma abordagem prática para análise de dados e construção de modelos de machine learning para prever a aderência a investimentos em uma campanha de marketing. O modelo KNN apresentou o melhor desempenho e foi salvo para uso futuro.
-
+Este projeto forneceu uma abordagem detalhada para a análise e previsão da aderência de investimentos utilizando técnicas de machine learning. Através da transformação de dados, ajuste e comparação de modelos, e salvamento e uso dos melhores modelos, oferecemos um fluxo de trabalho completo para prever o comportamento dos clientes em relação aos investimentos.
